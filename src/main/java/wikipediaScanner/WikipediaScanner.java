@@ -3,7 +3,6 @@ package wikipediaScanner;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
-import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -14,8 +13,11 @@ import java.util.stream.Collectors;
 
 public class WikipediaScanner {
     String request;
+    String wikipediaJson = "";
+    String apiURL = "https://www.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles=";
+    String randomURL = "https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&generator=random&grnnamespace=0";
 
-    public WikipediaScanner(String request) throws IOException {
+    public WikipediaScanner(String request) {
         this.request = request;
         this.GET(request);
     }
@@ -28,28 +30,32 @@ public class WikipediaScanner {
         request = request + " wikipedia";
 
         try {
-            System.out.println(request);
             search = Jsoup.connect("https://www.google.com/search?q="
                     + URLEncoder.encode(request, encoding)).userAgent("Chrome/87.0.4280.88").get();
 
-            String wikipediaURL = search.getElementsByTag("a").get(15).text();
-            System.out.println(wikipediaURL);
+            String wikipediaURL = search.getElementsByTag("a").get(16).text();
 
-            String wikipediaJson = "https://www.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles="
-                    + wikipediaURL.substring(0, wikipediaURL.indexOf("-")-1).replaceAll(" ", "_");
-
-            System.out.println(wikipediaJson);
+            if (wikipediaURL.indexOf("-") != -1){
+                wikipediaJson = apiURL + wikipediaURL.substring(0, wikipediaURL.indexOf("-")-1).replaceAll(" ", "_");
+            } else {
+                System.out.println("Nothing found but read this:");
+                wikipediaJson = randomURL;
+            }
 
             HttpURLConnection http = (HttpURLConnection) new URL(wikipediaJson).openConnection();
             http.addRequestProperty("User-Agent", "Chrome/87.0.4280.88");
-            BufferedReader inquery = new BufferedReader(new InputStreamReader(http.getInputStream()));
+            BufferedReader inquiry = new BufferedReader(new InputStreamReader(http.getInputStream()));
 
-            String response = inquery.lines().collect(Collectors.joining());
-            inquery.close();
+            String response = inquiry.lines().collect(Collectors.joining());
+            inquiry.close();
 
             String result = response.split("extract\":\"")[1];
             result = result.replaceAll("}", "");
-            System.out.println(result);
+            System.out.println(result.replaceAll("(.{125})", "$1\n"));
+            wikipediaURL = "https://en.wikipedia.org/wiki/"
+                    +response.split("title\":\"")[1].split("\",")[0].replaceAll(" ", "_");
+            System.out.println("Read more here:");
+            System.out.println(wikipediaURL);
 
         } catch (Exception ex) {
             ex.printStackTrace();
