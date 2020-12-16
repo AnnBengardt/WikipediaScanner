@@ -3,6 +3,7 @@ package wikipediaScanner;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -43,19 +44,20 @@ public class WikipediaScanner {
             search = Jsoup.connect("https://www.google.com/search?q="
                     + URLEncoder.encode(request, encoding)).userAgent("Chrome/87.0.4280.88").get();
 
-            // на обычной странице с результатами поиска первая ссылка находится в шестнадцатом тэге <a></a>
-            String wikipediaURL = search.getElementsByTag("a").get(16).text();
-
+            // на обычной странице с результатами поиска ссылки находятся в тэге <h3></h3>
+            String wikipediaURL = search.getElementsByTag("h3").get(0).text();
             /*
-            с помощью инструментов строк берём из тэга заголовк статьи, если же нашлось что-то неверное или ничего не
+            с помощью инструментов строк берём из тэга заголовок статьи, если же нашлось что-то неверное или ничего не
             нашлось, то программа предложит пользователю рандомную статью, полученную тоже с помощью API.
              */
-            if (wikipediaURL.contains("wikipedia.org")){
-                wikipediaJson = apiURL + wikipediaURL.substring(0, wikipediaURL.indexOf("- ")-1).replaceAll(" ", "_");
+            if (wikipediaURL.contains(" - Wikipedia")) {
+                wikipediaJson = apiURL + wikipediaURL.split(" - Wikipedia")[0].replaceAll(" ", "_");
+            } else if (wikipediaURL.contains(" — Википедия")) {
+                wikipediaURL = search.getElementsByTag("h3").get(1).text();
+                wikipediaJson = apiURL + wikipediaURL.split(" - Wikipedia")[0].replaceAll(" ", "_");
             } else {
-                System.out.println("Nothing found but read this:");
-                wikipediaJson = randomURL;
-            }
+                    System.out.println("Nothing found but read this:");
+                    wikipediaJson = randomURL;}
 
             // GET-запрос по ссылке для API, добавляем устройство
             HttpURLConnection http = (HttpURLConnection) new URL(wikipediaJson).openConnection();
@@ -75,12 +77,12 @@ public class WikipediaScanner {
             System.out.println(result.replaceAll("(.{125})", "$1\n"));
 
             // добавление ссылки на полную статью
-            wikipediaURL = "https://en.wikipedia.org/wiki/"
+            String outputURL = "https://en.wikipedia.org/wiki/"
                     +response.split("title\":\"")[1].split("\",")[0].replaceAll(" ", "_");
             System.out.println("Read more here:");
-            System.out.println(wikipediaURL);
+            System.out.println(outputURL);
 
-        } catch (Exception ex) {
+        } catch (IOException ex) {
             ex.printStackTrace();
         }
 
